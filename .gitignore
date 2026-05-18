@@ -4,4 +4,4 @@ __pycache__/
 *.db
 .vscode/
 tempCodeRunnerFile.*
-mindpulse_model/
+mindpulse_model/**/*.safetensors
