@@ -1,230 +1,138 @@
-# 🧠 MindPulse AI — Emotion Intelligence Platform
+# MindPulse AI — Hinglish App-Review Intelligence
 
-MindPulse AI is an advanced AI-powered Emotion and Sentiment Analysis platform built using Hugging Face Transformers, PyTorch, and Streamlit. The system analyzes user text, detects emotions, performs sentiment analysis, understands emojis and slang, and visualizes emotional trends through an interactive dashboard.
+> A continually learning NLP system that reads live Google Play reviews of Indian apps — most of them Hinglish, slang-heavy and emoji-filled — and tells product, support and release teams what users are angry about, how urgent it is, and what changed since the last app update.
 
-The project combines Natural Language Processing (NLP), deep learning, and real-time analytics to create a smart emotion intelligence system capable of understanding human emotional patterns from text inputs.
-
----
-
-# 🚀 Features
-
-## ✅ Emotion Detection
-Detects emotions from user text using Transformer-based deep learning models.
-
-## ✅ DistilBERT Emotion Classification
-Uses a fine-tuned DistilBERT Transformer model for accurate emotion prediction from text inputs.
-
-## ✅ Sentiment Analysis
-Classifies text sentiment into:
-- Positive
-- Negative
-- Neutral
-
-## ✅ Emoji-Aware NLP
-Understands emotional meaning behind emojis and integrates them into predictions.
-
-## ✅ Slang Normalization
-Converts internet slang and informal text into meaningful language for improved NLP performance.
-
-## ✅ Vocabulary Learning System
-Tracks unknown words and dynamically expands vocabulary understanding.
-
-## ✅ Real-Time Confidence Scores
-Displays confidence probability for predictions.
-
-## ✅ Analytics Dashboard
-Visualizes:
-- Emotion trends
-- Sentiment distribution
-- Prediction history
-- User analytics
-
-## ✅ SQLite Database Integration
-Stores prediction history and analytics locally.
+**Status:** 🚧 In development (v2 rebuild). v1 — a general-purpose emotion classifier — is preserved under the `v1-emotion-classifier` tag.
 
 ---
 
-# 🛠️ Tech Stack
+## Why this exists
 
-## Frontend
-- Streamlit
+Indian consumer apps receive thousands of Play Store reviews every day. Most are written in **Hinglish** (Hindi–English code-mixed, usually in Roman script), full of slang and emojis:
 
-## Backend
-- Python
+> *"bhai refund 5 din se nahi aaya, paisa kat gaya order cancel 😡 customer care bakwas"*
 
-## AI / Machine Learning
-- DistilBERT (Transformer-based NLP Model)
-- Hugging Face Transformers
-- PyTorch
-- Scikit-learn
+Off-the-shelf sentiment tools are trained on clean English and misread this text. Teams that need to react — to a broken release, a payment outage, a refund backlog — find out late, from social media.
 
-## NLP & Sentiment Analysis
-- VaderSentiment
-- Emoji Processing
-- Tokenization & Text Normalization
+MindPulse AI turns that review stream into decisions:
 
-## Database
-- SQLite
+| Who | Question it answers |
+|---|---|
+| Release / QA engineers | Did the latest version break something? |
+| Support leads | Which reviews need a reply first? |
+| Product managers | What should we fix next, and is it getting better? |
+| Competitive analysts | How do we compare with a rival in the same category? |
 
-## Data Visualization
-- Plotly
+## What it does
 
----
+- **Understands Hinglish** — slang, emoji and script normalisation, then a transformer fine-tuned on code-mixed text.
+- **Tags every review** with four predictions from one multi-task model:
+  - **Sentiment** — positive / neutral / negative
+  - **Emotion** — joy, anger, disappointment, anxiety, surprise, neutral
+  - **Aspect** (multi-label) — payment, refund, delivery, order accuracy, app performance, UI/UX, customer support, pricing & offers, account & login
+  - **Urgency** — low / medium / high / critical
+- **Detects spikes** — e.g. payment complaints jumping 3× after a new release.
+- **Discovers new issues** — clusters complaints that don't fit any known aspect yet.
+- **Keeps learning** — collects new labels every day, detects drift, retrains, and promotes a new model **only if it beats the current one** on a frozen, human-labelled test set.
+- **Shows it all live** — a public dashboard tracking real apps, including a model-health page with every model version's metrics.
 
-# 📂 Project Structure
+## Tracked apps (v2)
 
-```plaintext
-MindPulse-AI/
-│
-├── mindpulse_model/
-│   ├── config.json
-│   ├── tokenizer.json
-│   ├── tokenizer_config.json
-│   ├── label_encoder.pkl
-│   └── unknown_words.json
-│
-├── src/
-│   ├── database.py
-│   ├── emoji_utils.py
-│   ├── emoji_wrapper.py
-│   ├── predict.py
-│   ├── sentiment.py
-│   ├── slang.py
-│   └── vocab_updater.py
-│
-├── app.py
-├── requirements.txt
+Six apps, in same-category pairs so comparisons are meaningful:
+
+| Category | Apps |
+|---|---|
+| Food delivery | Zomato, Swiggy |
+| Payments | PhonePe, Paytm |
+| Quick commerce | Blinkit, Zepto |
+
+Adding an app is a one-line config change. All figures shown for these apps are **model estimates from public reviews**, not official company data.
+
+## Architecture at a glance
+
+```
+Play Store ──► Ingestion (daily, GitHub Actions) ──► Cleaning & normalisation ──► PostgreSQL
+                                                                              │
+              ┌─────────────── Inference (ONNX student model) ◄──────────────┤
+              ▼                                                               │
+       Predictions ──► Spike detection · Issue clustering · Urgency ranking ──┤
+              │                                                               │
+              ▼                                                               ▼
+   Active-learning queue ──► Labels ──► Retraining (Colab/Kaggle GPU) ──► Promotion gate ──► Model registry
+                                                                                               │
+                                     FastAPI service  ◄────────────────────────────────────────┘
+                                     Streamlit dashboard
+```
+
+Full details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+## Tech stack
+
+| Layer | Tools |
+|---|---|
+| Data collection | `google-play-scraper`, GitHub Actions (scheduled) |
+| Storage | PostgreSQL (hosted free tier), Parquet snapshots |
+| NLP / DL | PyTorch, Hugging Face Transformers, HingBERT, sentence-transformers |
+| Classical ML | scikit-learn, LightGBM |
+| Unsupervised | UMAP, HDBSCAN, c-TF-IDF |
+| Experiment tracking | MLflow |
+| Serving | FastAPI, ONNX Runtime, Docker |
+| Dashboard | Streamlit, Plotly |
+| Training compute | Google Colab / Kaggle GPUs |
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Components, data flow, deployment, tech choices |
+| [`docs/DATA_PLAN.md`](docs/DATA_PLAN.md) | Data sources, schema, label taxonomy, labeling strategy, gold test set |
+| [`docs/ML_DESIGN.md`](docs/ML_DESIGN.md) | Models, training, evaluation, ablations |
+| [`docs/RETRAINING.md`](docs/RETRAINING.md) | Continual-learning loop, drift detection, promotion gate |
+| [`docs/DASHBOARD_SPEC.md`](docs/DASHBOARD_SPEC.md) | Every dashboard page and what it shows |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phased plan with tasks and exit criteria |
+
+## Results
+
+To be filled in as phases complete. Every number here will come from the frozen gold test set (time-held-out, human-labelled) and will be compared against classical baselines.
+
+| Task | Baseline (TF-IDF + LR) | MindPulse | Metric |
+|---|---|---|---|
+| Sentiment | — | — | Macro-F1 |
+| Emotion | — | — | Macro-F1 |
+| Aspect | — | — | Micro / Macro-F1 |
+| Urgency | — | — | Macro-F1 |
+
+## Planned repository structure
+
+```
+mindpulse-ai/
 ├── README.md
-├── .gitignore
-└── run.bat
+├── docs/                    # design documents
+├── configs/                 # tracked apps, label taxonomy, thresholds
+├── ingestion/               # scraper, dedup, scheduling
+├── processing/              # normalisation (slang, emoji, script), language ID
+├── labeling/                # weak labels, LLM-assisted labeling, gold set tools
+├── training/                # baselines, DAPT, multi-task model, distillation
+├── evaluation/              # gold-set eval, calibration, ablations
+├── retraining/              # drift detection, AL queue, promotion gate
+├── analytics/               # spike detection, issue clustering
+├── serving/                 # FastAPI app, ONNX export
+├── dashboard/               # Streamlit app
+├── db/                      # schema and migrations
+├── notebooks/               # exploration and training notebooks
+├── tests/
+├── .github/workflows/       # scheduled ingestion and inference
+├── requirements.txt
+└── Dockerfile
 ```
 
----
+## Responsible use
 
-# ⚙️ Installation & Setup
+- Only **public** reviews are collected, at low volume, for non-commercial portfolio and research purposes.
+- Reviewer names are **not stored**; only review text, rating, date and app version.
+- Dashboard figures are labelled as model estimates and shown with sample sizes and confidence.
+- LLMs may assist with labeling; every LLM label is checked against human labels, and LLMs never make the production predictions.
 
-## 1️⃣ Clone Repository
+## Author
 
-```bash
-git clone https://github.com/tanmay-005/mindpulse-ai.git
-```
-
----
-
-## 2️⃣ Move Into Project Folder
-
-```bash
-cd mindpulse-ai
-```
-
----
-
-## 3️⃣ Create Virtual Environment
-
-### Windows
-
-```bash
-python -m venv venv
-```
-
----
-
-## 4️⃣ Activate Virtual Environment
-
-### Windows
-
-```bash
-venv\Scripts\activate
-```
-
-### Linux / Mac
-
-```bash
-source venv/bin/activate
-```
-
----
-
-## 5️⃣ Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-# ▶️ Run Application
-
-```bash
-streamlit run app.py
-```
-
-The application will launch in your browser.
-
----
-
-# 🧠 AI Architecture
-
-The platform uses a DistilBERT-based Transformer NLP model fine-tuned for emotion classification and sentiment understanding.
-### Pipeline:
-1. Text Input
-2. Slang Normalization
-3. Emoji Interpretation
-4. Tokenization
-5. Transformer Inference
-6. Emotion Prediction
-7. Sentiment Classification
-8. Analytics Storage
-
----
-
-# 📊 Dashboard Features
-
-- Emotion Frequency Charts
-- Sentiment Distribution
-- Confidence Score Visualization
-- Historical Predictions
-- Real-Time Analytics
-
----
-
-# 🔮 Future Enhancements
-
-- 🎤 Voice Emotion Detection
-- 🌍 Multi-language Support
-- 😀 Facial Emotion Recognition
-- 🤖 AI Chat Assistant
-- 📱 Mobile Application
-- ☁️ Cloud Deployment
-- 📈 Advanced Deep Learning Models
-
----
-
-# 📌 Important Note
-
-Large model weight files (`.safetensors`) are excluded from GitHub due to GitHub file-size limitations.
-
-To use custom trained models:
-- Place model files inside:
-  
-```plaintext
-mindpulse_model/
-```
-
----
-
-# 👨‍💻 Author
-
-**Tanmay Rana**
-
----
-
-# 📜 License
-
-This project is intended for educational, research, and portfolio purposes.
-
----
-
-# ⭐ Support
-
-If you found this project useful, consider giving it a ⭐ on GitHub.
+**Tanmay Rana** — [GitHub](https://github.com/tanmay-005) · [LinkedIn](https://linkedin.com/in/tanmay-rana-13a7b4249)
