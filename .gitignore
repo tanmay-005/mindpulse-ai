@@ -1,7 +1,23 @@
+# Python
 venv/
+.venv/
 __pycache__/
 *.pyc
-*.db
+.pytest_cache/
+
+# Secrets
+.env
+
+# Data and models (never committed)
+data/*
+!data/.gitkeep
+models/
+mlruns/
+*.safetensors
+*.onnx
+*.pt
+*.bin
+
+# Editors
 .vscode/
 tempCodeRunnerFile.*
-mindpulse_model/**/*.safetensors
