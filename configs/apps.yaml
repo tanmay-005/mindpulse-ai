@@ -1,0 +1,27 @@
+# Tracked apps. Adding an app = adding an entry here.
+apps:
+  - id: com.application.zomato
+    name: Zomato
+    category: food_delivery
+  - id: in.swiggy.android
+    name: Swiggy
+    category: food_delivery
+  - id: com.phonepe.app
+    name: PhonePe
+    category: payments
+  - id: net.one97.paytm
+    name: Paytm
+    category: payments
+  - id: com.grofers.customerapp
+    name: Blinkit
+    category: quick_commerce
+  - id: com.zeptoconsumerapp
+    name: Zepto
+    category: quick_commerce
+
+scrape:
+  country: in
+  langs: [en, hi]       # Hinglish appears under both
+  batch_size: 200       # reviews per request
+  sleep_seconds: 1.5    # pause between requests, to stay polite
+  max_retries: 4
