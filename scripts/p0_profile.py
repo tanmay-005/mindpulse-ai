@@ -62,6 +62,28 @@ def main():
     print("\nBy query language (how Google sorted them):")
     print(pd.crosstab(df["lang_query"], df["lang_mix"], normalize="index").round(2).to_string())
 
+    # Same question, only for reviews with 3+ words (the ones a model can learn from)
+    long = df[df["n_words"] >= 3]
+    share_long = 100 * long["lang_mix"].isin(["hinglish", "hindi_dev"]).mean()
+    print(f"\nReviews with 3+ words: {len(long)} of {len(df)}")
+    print(f"Hinglish or Hindi among them: {share_long:.1f}%")
+    print(pd.crosstab(long["app_name"], long["lang_mix"], normalize="index").round(2).to_string())
+
+    # How fast do reviews arrive? Newest-first sample, so time span = time to collect them
+    df["created_at"] = pd.to_datetime(df["created_at"])
+    grp = df.groupby(["app_name", "lang_query"])["created_at"]
+    days = (grp.max() - grp.min()).dt.total_seconds() / 86400
+    per_day = (grp.size() / days.clip(lower=1)).round(0)
+    print("\nNew reviews per day (estimated):")
+    print(per_day.unstack().to_string())
+
+    # The live stream is mostly 'en', so estimate useful Hinglish/Hindi per day directly
+    df["useful_hi"] = (df["n_words"] >= 3) & df["lang_mix"].isin(["hinglish", "hindi_dev"])
+    frac = df.groupby(["app_name", "lang_query"])["useful_hi"].mean()
+    est = (per_day * frac).unstack().sum(axis=1).round(0)
+    print("\nEstimated useful Hinglish/Hindi reviews per day (3+ words):")
+    print(est.to_string())
+    print(f"Total across apps: {est.sum():.0f} per day")
 
 if __name__ == "__main__":
     main()
