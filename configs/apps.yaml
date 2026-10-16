@@ -25,3 +25,6 @@ scrape:
   batch_size: 200       # reviews per request
   sleep_seconds: 1.5    # pause between requests, to stay polite
   max_retries: 4
+  first_run_per_lang: 1000     # first time an app is scraped
+  max_per_run_per_lang: 20000  # safety cap for later runs
+  overlap_hours: 6             # re-check this far back, in case reviews appear late
