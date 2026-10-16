@@ -10,6 +10,7 @@ import logging
 
 from ingestion.store import connect
 from processing.normalize import normalize
+from processing.langmix import lang_mix
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("processing")
@@ -27,9 +28,15 @@ def main():
         log.info("%d reviews to process", len(rows))
         for start in range(0, len(rows), BATCH):
             batch = rows[start:start + BATCH]
-            updates = [(normalize(text), rid) for rid, text in batch]
+            updates = []
+            for rid, text in batch:
+                norm = normalize(text)
+                mix = lang_mix(norm)
+                updates.append((norm, mix.label, mix.code_mix_index, rid))
             with conn.cursor() as cur:
-                cur.executemany("UPDATE reviews SET content_norm = %s WHERE review_id = %s", updates)
+                cur.executemany(
+                    "UPDATE reviews SET content_norm = %s, lang_mix = %s, code_mix_index = %s "
+                    "WHERE review_id = %s", updates)
             conn.commit()
             log.info("  processed %d / %d", min(start + BATCH, len(rows)), len(rows))
     log.info("Done.")

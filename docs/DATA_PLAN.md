@@ -184,7 +184,7 @@ Applied in order; each step is a small, unit-tested function in `processing/`.
 2. **Emoji handling** — keep the emoji and add a text tag from an emoji lexicon (`😡` → `😡 [angry]`). Written fresh for v2; v1's emoji layer is only a reference.
 3. **Elongation** — cap repeated characters at two (`bakwaaaas` → `bakwaas`, `!!!!!` → `!!`).
 4. **Slang and spelling normalisation** — a new dictionary built for v2 (v1's slang map used as a starting reference) plus entries mined from reviews (`plz/pls` → `please`, `nhi/nai/nahin` → `nahi`). Hinglish words are normalised to one common spelling, not translated.
-5. **Script handling** — detect Devanagari. Reviews mostly in Devanagari are transliterated to Roman script (e.g. with an Indic transliteration library) so the Roman-script encoder can read them; the original stays in `content_raw`.
+5. **Script handling** — detect Devanagari, but do **not** transliterate it: the chosen encoder (`hing-roberta-mixed`, see `docs/feasibility.md`) was trained on both Roman and Devanagari Hinglish, so converting scripts would only lose information.
 6. **Language ID** — token-level Hindi/English tagging (a HingBERT-LID-style model, or a lexicon baseline first) to compute `lang_mix` and `code_mix_index`.
 7. **Spam and junk filter** — flag empty, emoji-only, very short ("good"), repeated-character or promotional reviews. Flagged reviews are stored but excluded from training and alerts.
 8. **Deduplication** — exact duplicates by `review_id`; near-duplicates (copy-pasted reviews) by MinHash on character shingles, recorded in `near_dup_of`.

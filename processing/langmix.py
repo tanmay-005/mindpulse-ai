@@ -1,39 +1,29 @@
-"""Rough language-mix tagging for reviews.
+"""Language-mix tagging for reviews (step 1.4).
 
-Phase 0 uses a word list to estimate how much Hinglish the apps receive.
-Phase 1 replaces this with a trained language-ID model behind the same function.
+Each word is tagged as Devanagari Hindi, Roman-script Hindi (if it is in
+hindi_words.txt) or English; then the whole review gets a label:
 
-Labels: 'english' | 'hinglish' | 'hindi_dev' (mostly Devanagari script) | 'other'
+    'english' | 'hinglish' | 'hindi_dev' (mostly Devanagari) | 'other' (no words)
+
+Devanagari is NOT converted to Roman script: our encoder (hing-roberta-mixed)
+was trained on both scripts, so converting would only lose information.
 """
 import re
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+
+WORDS_PATH = Path(__file__).resolve().parent / "hindi_words.txt"
 
 # a "token" is a run of English letters OR a run of Devanagari letters
 TOKEN_RE = re.compile(r"[A-Za-z]+|[\u0900-\u097F]+")
 DEVANAGARI_RE = re.compile(r"^[\u0900-\u097F]+$")
 
-# Common Roman-script Hindi words in app reviews.
-# Words that are ALSO common English words ("me", "to", "the", "so", "do",
-# "main", "bus", "par") are left out on purpose, so English reviews aren't miscounted.
-ROMAN_HINDI = frozenset("""
-    hai hain ha hu hoon ho hota hoti hote hua hui hue tha thi thay
-    nahi nahin nhi nai na mat kabhi
-    kya kyu kyun kyon kaise kaisa kaisi kab kaha kahan kon kaun kitna kitne kitni
-    kuch koi sab sabhi bahut bohot bhot bht bilkul ekdum zyada jyada kam
-    aur ya lekin toh phir fir bhi hi sirf abhi ab tak se ko ka ki ke
-    mera meri mere tera teri tere apna apni apne uska uski uske hamara humara
-    mujhe mujhko tumhe aapko unko isko usko
-    hum tum aap wo woh ye yeh yah vo
-    karo karna karne kar kiya kiye kiyaa kardo krdo kr krna diya diye de dena
-    raha rahi rahe rha rhi gaya gayi gaye gya gyi liya lena milta milti mila mili
-    aaya aayi aaye aya ayi aata aati jata jati jaata
-    paisa paise paisay rupay rupaye wapas vapas kat kata kaat
-    accha acha achha achhi acchi badiya badhiya bekar bekaar bakwas bakwaas
-    ghatiya bura buri galat sahi jaldi der
-    bhai bhaiya yaar didi ji
-    din raat ghanta ghante mahina hafte saal
-    khana khaana dukan dukaan saman samaan
-""".split())
+
+@lru_cache(maxsize=1)
+def roman_hindi():
+    lines = WORDS_PATH.read_text(encoding="utf-8").splitlines()
+    return frozenset(w.strip().lower() for w in lines if w.strip() and not w.startswith("#"))
 
 
 @dataclass(frozen=True)
@@ -47,7 +37,7 @@ def tag_token(token):
     """'hi_dev' (Devanagari), 'hi_rom' (Roman-script Hindi) or 'en'."""
     if DEVANAGARI_RE.match(token):
         return "hi_dev"
-    if token.lower() in ROMAN_HINDI:
+    if token.lower() in roman_hindi():
         return "hi_rom"
     return "en"
 
