@@ -90,3 +90,13 @@ def test_whole_words_only():
 
 def test_aap_is_hindi_you_not_app():
     assert normalize("aap ne mera paisa wapas nahi kiya") == "aap ne mera paisa wapas nahi kiya"
+
+
+
+def test_emoji_spam_block_collapsed():
+    raw = "very bad.😡😡😡😡🤬🤬🤬😡😡🤬🤬🤬🤬 Ordering"
+    assert normalize(raw) == "very bad. 😡😡🤬🤬 [angry] Ordering"
+
+
+def test_emoji_block_with_different_tags():
+    assert normalize("😂😂😂 👍👍 ok") == "😂😂👍👍 [laughing] [thumbs_up] ok"

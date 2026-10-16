@@ -72,6 +72,13 @@ hinglish:
   kuch: kuch
   kuchh: kuch
   kch: kuch
+  achcha: accha
+  kerta: karta
+  jayada: zyada
+  jyada: zyada
+  gatiya: ghatiya
+  vala: wala
+  esme: isme
 
 english:
   plz: please
@@ -117,3 +124,6 @@ english:
   awsm: awesome
   osm: awesome
   appp: app
+  nd: and
+  pement: payment
+  payement: payment

@@ -48,23 +48,28 @@ EMOJI_TAGS = {
     "🤮": "disgusted", "🤢": "disgusted", "💩": "poop",
     "🤔": "confused", "😕": "confused", "🥺": "pleading", "😐": "neutral",
     "🤡": "clown", "😴": "bored", "🤦": "facepalm",
+    "🤗": "happy", "🥲": "sad",
 }
 _VS = "\ufe0f"   # variation selector that often follows ❤ ☺ ☹ ♥
 _SKIN = "[\U0001F3FB-\U0001F3FF]"
-EMOJI_RUN_RE = re.compile(
-    "((?:" + "|".join(re.escape(e) for e in sorted(EMOJI_TAGS, key=len, reverse=True))
-    + ")(?:" + _VS + "|" + _SKIN + ")?)(?:\\1|(?:" + _VS + "))*"
-)
+_ONE = ("(?:" + "|".join(re.escape(e) for e in sorted(EMOJI_TAGS, key=len, reverse=True))
+        + ")(?:" + _VS + "|" + _SKIN + ")*")
+EMOJI_ONE_RE = re.compile(_ONE)
+EMOJI_BLOCK_RE = re.compile(_ONE + r"(?:\s*" + _ONE + ")*")   # back-to-back emojis, spaces allowed
 
 
 def tag_emojis(text):
-    """Keep at most two of a repeated emoji and add a text tag after it."""
+    """Collapse each block of emojis: every distinct emoji at most twice, each tag once.
+    "😡😡😡🤬🤬😡" -> "😡😡🤬🤬 [angry]" """
     def repl(m):
-        base = m.group(1).replace(_VS, "")
-        base = re.sub(_SKIN, "", base)
-        count = m.group(0).count(base)
-        return f" {base * min(count, 2)} [{EMOJI_TAGS[base]}] "
-    return EMOJI_RUN_RE.sub(repl, text)
+        counts = {}
+        for e in EMOJI_ONE_RE.findall(m.group(0)):
+            base = re.sub(_SKIN, "", e.replace(_VS, ""))
+            counts[base] = counts.get(base, 0) + 1
+        emojis = "".join(base * min(n, 2) for base, n in counts.items())
+        tags = list(dict.fromkeys(EMOJI_TAGS[base] for base in counts))
+        return " " + emojis + " " + " ".join(f"[{t}]" for t in tags) + " "
+    return EMOJI_BLOCK_RE.sub(repl, text)
 
 
 # ── 3. elongations ────────────────────────────────────────────
